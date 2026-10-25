@@ -1,32 +1,106 @@
 # My Memory Garden
 
-Prova visual em React + TypeScript + Phaser 3, seguindo as referências fornecidas: céu pastel, colinas verdes, pétalas, borboletas e interface manuscrita.
+Um jardim onde cada memória vira uma flor. Você planta um momento, escolhe como ele fez você se sentir e vê a semente brotar e florescer. A privacidade é decidida **memória por memória**: o jardim é seu, e cada flor decide se pode ser vista por visitantes.
+
+**[Ver o site →](https://gabrielajacottet.github.io/my-memory-garden/)**
+
+## Funcionalidades
+
+- **Jardim em vista 3/4**, no estilo Stardew Valley: o chão é visto de cima e as flores ficam em pé, com profundidade pela posição. Dá para arrastar e dar zoom com o mouse ou com pinça no celular. Uma vista lateral continua disponível na Ajuda.
+- **Crescimento animado**: semente → broto → flor. Cada emoção (alegria, amor, calma, tristeza, crescimento, encanto) tem sua própria flor, que balança ao vento.
+- **Quatro estações**, que mudam as cores das plantas, as partículas do céu e trazem neve no inverno.
+- **Contas com e-mail e senha**, com recuperação de senha. Seu jardim fica salvo na nuvem e você pode dar um nome a ele.
+- **Privacidade por memória**: toda memória nasce privada, e você abre ou fecha cada uma individualmente.
+- **Visitar jardins**: a página inicial lista os jardins que têm memórias públicas, com busca pelo nome do jardim ou de quem cuida dele. Passando o mouse sobre uma flor aparece um balão com o início da memória.
+- **Três idiomas**: português (padrão), inglês e espanhol.
+- **Acessibilidade**: navegação por teclado nos formulários, foco visível, rótulos para leitores de tela e respeito à preferência de movimento reduzido.
+
+## Como a privacidade funciona
+
+A regra não fica só na interface: ela é garantida pelo banco. Em [`firestore.rules`](firestore.rules):
+
+- uma memória só pode ser lida pelo dono ou, se estiver marcada como pública, por qualquer pessoa;
+- um jardim sem nenhuma memória pública não aparece para visitantes, nem pelo nome;
+- o resumo público de cada jardim conta apenas as memórias públicas, então ninguém descobre quantas memórias privadas existem;
+- todo dado gravado é validado (campos permitidos, tamanhos e tipos).
+
+## Tecnologias
+
+- **React 19 + TypeScript**, com Vite
+- **Phaser 3** para o jardim (cenário, sprites, câmera, animações)
+- **Firebase**: Authentication (e-mail/senha) e Cloud Firestore
+- **GitHub Actions + GitHub Pages** para o deploy
+- **Playwright** para testes de navegador
+
+Toda a arte (cenário, flores, ilustrações da página inicial) é desenhada em código, com Canvas2D e SVG. Não há imagens prontas.
+
+## Estrutura
+
+```
+src/
+  Root.tsx              rotas por hash (#/, #/login, #/garden, #/garden/<id>)
+  App.tsx               tela do jardim: cabeçalho, diálogos, plantar, compartilhar
+  i18n.tsx              dicionários pt/en/es e seletor de idioma
+  components/
+    Home.tsx            página inicial e busca de jardins
+    AuthPage.tsx        entrar, criar conta, recuperar senha
+    GardenPage.tsx      carrega o jardim antes de abrir o canvas
+  garden/
+    FieldScene.ts       vista 3/4: campo, câmera, profundidade, balão de prévia
+    GardenScene.ts      vista lateral
+    plant-art.ts        flores desenhadas em Canvas2D e animação de vento
+    field-art.ts        chão procedural e posições em espiral
+    landscape.ts        cenário da vista lateral
+    seasons.ts          paletas e partículas de cada estação
+  services/
+    firebase.ts         inicialização a partir das variáveis de ambiente
+    auth.tsx            sessão e ações de conta
+    gardens.ts          leitura e gravação no Firestore, busca
+    public-gardens.ts   jardins de exemplo exibidos ao lado dos reais
+firestore.rules         regras de segurança
+firestore.indexes.json  índice usado pela busca
+```
+
+## Rodar localmente
+
+Requer Node.js 22.12+.
 
 ```bash
 npm install
-npm run dev       # http://127.0.0.1:5173
-npm run build     # TypeScript + produção
-npm test          # Chrome desktop e celular emulado
+cp .env.example .env.local   # preencha com a configuração do seu app Web no Firebase
+npm run dev                  # http://127.0.0.1:5173
 ```
 
-Requer Node.js 22.12+ e Google Chrome instalado para os testes. Para usar Chromium, remova `launchOptions.channel` de `playwright.config.ts` e execute `npx playwright install chromium`.
+Sem o `.env.local`, a página inicial e os jardins de exemplo funcionam, e a tela de login avisa que o Firebase não está configurado.
 
-**Plant a Memory** abre o formulário visual. Escreva um momento, escolha a emoção e a importância, e selecione **Plant it**. A semente cresce em aproximadamente três segundos. Clique ou toque na flor para consultar a lembrança; **Pluck** a remove. O botão de estação alterna Spring → Summer → Autumn → Winter e mostra o ícone atual. As plantas acompanham a estação com folhas e flores em tons sazonais e neve no inverno, preservando suas memórias e posições. O controle de movimento reduzido fica na ajuda (**?**), também respeitando a preferência do sistema.
+### Configurar o Firebase
 
-As lembranças existem apenas na sessão: atualizar a página inicia um jardim vazio. Não há banco de dados, conta ou integração com IA.
+1. Crie um projeto no [console do Firebase](https://console.firebase.google.com).
+2. Em **Authentication**, ative o provedor **E-mail/senha**.
+3. Crie o banco **Firestore** (edição Standard, ID `(default)`, modo de produção).
+4. Registre um app Web e copie a configuração para o `.env.local`.
+5. Publique as regras e o índice:
+   ```bash
+   npx firebase-tools login
+   npx firebase-tools use --add
+   npx firebase-tools deploy --only firestore:rules,firestore:indexes
+   ```
 
-## Organização
+## Deploy
 
-- `src/garden/landscape.ts`: cenário vetorial responsivo e paleta.
-- `src/garden/seasons.ts`: estações, paletas e partículas sazonais.
-- `src/garden/plant-art.ts`: sprites orgânicos, espécies e frames de animação.
-- `src/garden/GardenScene.ts`: crescimento, seleção e efeitos.
-- `src/garden/PhaserGarden.ts`: ciclo de vida do Phaser no React.
-- `src/components/`: janelas e formulário da prova visual.
-- `src/styles.css`: interface e responsividade.
-- `public/fonts/`: Caveat e Quicksand locais, com licenças OFL.
-- `e2e/`: testes de navegador.
+Cada push na branch `main` dispara [o workflow](.github/workflows/deploy.yml), que compila o site e publica no GitHub Pages. Para funcionar:
 
-O cenário e os sprites são desenhados localmente com Canvas2D e utilizados pelo Phaser. As ilustrações pixel art da primeira direção não são utilizadas nesta versão. Consulte [a direção visual](docs/art-direction.md).
+- em **Settings → Pages**, a fonte precisa ser **GitHub Actions**;
+- as seis chaves do `.env.example` precisam estar cadastradas em **Settings → Secrets and variables → Actions → Variables**;
+- o domínio `<usuário>.github.io` precisa estar em **Firebase → Authentication → Settings → Authorized domains**.
 
-Validação executada: build de produção aprovado e 12 testes Playwright aprovados no Chrome, em desktop 1288×720 e celular emulado 390×844. Incluem troca das quatro estações preservando as memórias, formulário, crescimento, clique/toque, remoção, foco, movimento reduzido e reinício sem persistência. Sem erros de JavaScript ou recursos de rede. As capturas estão em `artifacts/reference-*.png`. Dispositivos físicos e Safari não foram testados.
+A configuração Web do Firebase é pública por natureza. Quem protege os dados são as regras do Firestore.
+
+## Estado atual
+
+- Os testes Playwright em `e2e/` foram escritos antes das contas existirem e ainda precisam rodar contra o Firebase Emulator para cobrir o login.
+- Testado em Chrome no desktop e em celular emulado; Safari e dispositivos físicos ainda não foram testados.
+
+## Créditos
+
+Fontes [Caveat](https://fonts.google.com/specimen/Caveat) e [Quicksand](https://fonts.google.com/specimen/Quicksand) (licença OFL, em `public/fonts/`), além de Fraunces e DM Sans, via Google Fonts.
