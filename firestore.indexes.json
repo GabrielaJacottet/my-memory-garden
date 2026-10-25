@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "gardens",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "search", "arrayConfig": "CONTAINS" },
+        { "fieldPath": "publicCount", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

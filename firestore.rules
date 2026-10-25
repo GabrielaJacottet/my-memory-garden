@@ -1,0 +1,41 @@
+rules_version = '2';
+
+// Privacy lives on each memory: visitors can read a memory only when its owner marked it public.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isOwner(ownerId) {
+      return request.auth != null && request.auth.uid == ownerId;
+    }
+
+    function validGarden(garden) {
+      return garden.keys().hasOnly(['name', 'owner', 'publicCount', 'emotions', 'search'])
+        && garden.name is string && garden.name.size() > 0 && garden.name.size() <= 80
+        && garden.owner is string && garden.owner.size() <= 80
+        && garden.publicCount is int && garden.publicCount >= 0
+        && garden.emotions is list && garden.emotions.size() <= 6
+        && (!('search' in garden) || (garden.search is list && garden.search.size() <= 300));
+    }
+
+    function validMemory(memory) {
+      return memory.keys().hasOnly(['description', 'emotion', 'importance', 'createdAt', 'isPublic'])
+        && memory.description is string && memory.description.size() > 0 && memory.description.size() <= 1000
+        && memory.emotion in ['joy', 'love', 'calm', 'sad', 'growth', 'wonder']
+        && memory.importance is int && memory.importance >= 1 && memory.importance <= 5
+        && memory.createdAt is string && memory.createdAt.size() <= 40
+        && memory.isPublic is bool;
+    }
+
+    match /gardens/{ownerId} {
+      // A garden with nothing public stays invisible, even its name.
+      allow read: if isOwner(ownerId) || resource.data.publicCount > 0;
+      allow create, update: if isOwner(ownerId) && validGarden(request.resource.data);
+      allow delete: if isOwner(ownerId);
+
+      match /memories/{memoryId} {
+        allow read: if isOwner(ownerId) || resource.data.isPublic == true;
+        allow create, update: if isOwner(ownerId) && validMemory(request.resource.data);
+        allow delete: if isOwner(ownerId);
+      }
+    }
+  }
+}
